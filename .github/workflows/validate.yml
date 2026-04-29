@@ -1,0 +1,35 @@
+name: Validate and convert Sigma rules
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Convert all rules
+        run: python -m sigma_to_spl convert rules/ --output-dir output/
+
+      - name: Upload converted SPL
+        uses: actions/upload-artifact@v4
+        with:
+          name: converted-spl
+          path: output/
+
+      - name: Run tests
+        run: python -m pytest tests/ -v

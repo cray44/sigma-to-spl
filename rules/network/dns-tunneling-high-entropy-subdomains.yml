@@ -1,0 +1,33 @@
+title: DNS Tunneling via High-Entropy Subdomains
+id: a8f3b2c1-4d5e-6f7a-8b9c-0d1e2f3a4b5c
+status: experimental
+description: Detects DNS queries with long subdomain labels indicative of data encoding used in DNS tunneling tools such as iodine, dnscat2, and DNSExfiltrator
+references:
+    - https://attack.mitre.org/techniques/T1071/004/
+    - https://github.com/cray44/detection-notes/blob/main/detections/network/dns/dns-tunneling-high-entropy-subdomains.md
+author: Chris Ray
+date: 2026-04-29
+tags:
+    - attack.command-and-control
+    - attack.t1071.004
+    - attack.exfiltration
+    - attack.t1048
+logsource:
+    category: dns
+    product: zeek
+detection:
+    selection:
+        qtype_name:
+            - TXT
+            - NULL
+            - CNAME
+    filter_internal:
+        query|endswith:
+            - '.internal.corp'
+            - '.local'
+    condition: selection and not filter_internal
+falsepositives:
+    - CDN providers with long random subdomains (Akamai, CloudFront, Fastly)
+    - Software update infrastructure
+    - Security tooling with DNS-based heartbeats
+level: medium

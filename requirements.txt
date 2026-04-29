@@ -1,0 +1,5 @@
+pySigma>=0.10.0
+pySigma-backend-splunk>=1.0.0
+pySigma-pipeline-sysmon>=1.0.0
+pyyaml>=6.0
+click>=8.1.0

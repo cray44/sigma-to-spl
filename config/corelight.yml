@@ -1,0 +1,37 @@
+# Splunk field and index configuration for Corelight/Zeek log sources.
+# Copy and modify this file to match your environment.
+
+default_index: "index=network"
+
+# Maps Sigma logsource category/product to Splunk index+sourcetype prefix
+index_map:
+  dns: "index=network sourcetype=corelight_dns"
+  network_connection: "index=network sourcetype=corelight_conn"
+  http: "index=network sourcetype=corelight_http"
+  tls: "index=network sourcetype=corelight_ssl"
+  file: "index=network sourcetype=corelight_files"
+  process_creation: "index=endpoint sourcetype=crowdstrike_falcon"
+  windows: "index=endpoint sourcetype=WinEventLog"
+
+# Maps Sigma generic field names to environment-specific field names
+field_map:
+  src_ip: "id.orig_h"
+  dst_ip: "id.resp_h"
+  src_port: "id.orig_p"
+  dst_port: "id.resp_p"
+  dns_query: "query"
+  dns_query_type: "qtype_name"
+  dns_answer: "answers"
+  http_method: "method"
+  http_uri: "uri"
+  http_host: "host"
+  tls_sni: "server_name"
+  filename: "filename"
+  filesize: "total_bytes"
+
+# Replaces raw sourcetype strings with Splunk macros where defined
+# Requires corresponding macros defined in Splunk (macros.conf)
+macros: {}
+  # Uncomment and define once macros exist in your Splunk environment:
+  # sourcetype=corelight_dns: "`corelight_dns`"
+  # sourcetype=corelight_conn: "`corelight_conn`"
