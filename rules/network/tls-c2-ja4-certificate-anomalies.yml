@@ -1,0 +1,52 @@
+title: TLS C2 via JA4 Fingerprint and Certificate Anomalies
+id: c4e8d2f1-9b3a-5c6d-b7e1-3f4a2b1c0d8e
+status: experimental
+description: >
+  Detects TLS connections exhibiting certificate anomalies indicative of C2
+  infrastructure: self-signed certificates, certificates where subject equals
+  issuer, or connections matching known C2 JA4/JA3 client fingerprints (Cobalt
+  Strike, Brute Ratel, Havoc). Self-signed certificates in outbound TLS to
+  external IPs are a strong indicator of adversary-controlled infrastructure.
+  Used across APT groups, ransomware operators, and red teams using Cobalt Strike
+  and successor frameworks.
+references:
+  - https://attack.mitre.org/techniques/T1071/001/
+  - https://attack.mitre.org/techniques/T1573/002/
+  - https://github.com/FoxIO-LLC/ja4
+  - https://www.mandiant.com/resources/blog/defining-cobalt-strike-components
+author: Chris Ray
+date: 2026-04-29
+tags:
+  - attack.command-and-control
+  - attack.t1071.001
+  - attack.t1573.002
+logsource:
+  product: zeek
+  category: tls
+  definition: Requires Zeek ssl.log forwarded to Splunk via Corelight App (sourcetype corelight_ssl). JA4 field requires the ja4 Zeek package installed on sensor.
+detection:
+  selection_established:
+    established: 'true'
+  filter_internal:
+    id.resp_h|cidr:
+      - '10.0.0.0/8'
+      - '172.16.0.0/12'
+      - '192.168.0.0/16'
+  selection_self_signed:
+    subject: '*'
+    issuer: '*'
+  condition: selection_established and not filter_internal and (selection_self_signed)
+  # NOTE: Sigma cannot express field equality comparisons (subject == issuer) or
+  # computed risk scoring. The production SPL below adds:
+  #   - subject=issuer self-signed detection
+  #   - certificate validity period calculation
+  #   - JA4/JA3 blocklist lookup against known C2 fingerprints
+  #   - Weighted risk scoring across multiple anomaly signals
+  # Treat this Sigma rule as the portable structural definition.
+  # Use the SPL in the ADS writeup as the production query.
+falsepositives:
+  - Internal services using self-signed certificates (dev environments, monitoring tools, network equipment)
+  - Security scanning tools (Nessus, Qualys) — typically inbound, not outbound
+  - Legitimate Go/Python TLS implementations sharing fingerprints with C2 frameworks
+  - Old on-premises appliances with expired or self-signed certificates
+level: medium
