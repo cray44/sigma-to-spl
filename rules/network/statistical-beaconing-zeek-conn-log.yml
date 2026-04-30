@@ -1,0 +1,47 @@
+title: Statistical Beaconing via Zeek Connection Log
+id: a4f8c2d1-9b3e-4a7f-8c5d-2e6b1f0a9c3d
+status: experimental
+description: >
+  Detects potential C2 beaconing by identifying hosts making repeated connections to
+  the same external IP:port at low-jitter intervals via Zeek conn.log. This rule defines
+  the structural pre-filter only — the statistical analysis (coefficient of variation /
+  jitter calculation via streamstats) cannot be expressed in base Sigma and is applied
+  in the SPL conversion. Minimum connection count and jitter thresholds are enforced
+  at query time.
+references:
+  - https://attack.mitre.org/techniques/T1071/
+  - https://www.activecountermeasures.com/blog-rita-version-4-0-release/
+  - https://github.com/activecm/rita
+author: Chris Ray
+date: 2026-04-30
+tags:
+  - attack.command_and_control
+  - attack.t1071
+logsource:
+  category: network_connection
+  product: zeek
+detection:
+  selection:
+    proto:
+      - tcp
+      - udp
+  filter_internal_dest:
+    id.resp_h|cidr:
+      - '10.0.0.0/8'
+      - '172.16.0.0/12'
+      - '192.168.0.0/16'
+      - '127.0.0.0/8'
+      - '::1/128'
+      - 'fe80::/10'
+  filter_no_data:
+    orig_bytes: 0
+  filter_ntp:
+    id.resp_p: 123
+    proto: udp
+  condition: selection and not filter_internal_dest and not filter_no_data and not filter_ntp
+falsepositives:
+  - Monitoring and telemetry agents with regular check-in intervals
+  - Software update clients (Windows Update, AV updates)
+  - Authentication heartbeat services
+  - CDN health check traffic
+level: medium
