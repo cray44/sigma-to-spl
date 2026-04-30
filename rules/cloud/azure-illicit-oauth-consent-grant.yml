@@ -1,0 +1,36 @@
+title: Azure Illicit OAuth Application Consent Grant
+id: b7e3a1f4-2c8d-4b9e-a5f6-3d7c0e2b8a1f
+status: experimental
+description: >
+  Detects successful OAuth application consent grants in Entra ID (Azure AD) that may
+  indicate a consent phishing attack or unauthorized app permission grant. Monitors the
+  "Consent to application" and "Add OAuth2PermissionGrant" audit events in the
+  ApplicationManagement category. Risk scoring on granted permission scopes (Mail.Send,
+  Files.ReadWrite.All, Directory.ReadWrite, offline_access) and admin consent detection
+  cannot be expressed in base Sigma and are applied in the SPL conversion.
+references:
+  - https://attack.mitre.org/techniques/T1528/
+  - https://www.cisa.gov/news-events/cybersecurity-advisories/aa24-057a
+  - https://www.microsoft.com/en-us/security/blog/2021/11/30/how-to-protect-your-organization-against-app-consent-phishing/
+author: Chris Ray
+date: 2026-04-30
+tags:
+  - attack.credential_access
+  - attack.collection
+  - attack.t1528
+logsource:
+  product: azure
+  service: auditlogs
+detection:
+  selection:
+    category: ApplicationManagement
+    operationName:
+      - 'Consent to application'
+      - 'Add OAuth2PermissionGrant'
+    result: success
+  condition: selection
+falsepositives:
+  - IT teams provisioning legitimate SaaS integrations
+  - Developers granting consent to internal test applications
+  - Admin consent granted during planned enterprise app onboarding
+level: medium
