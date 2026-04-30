@@ -1,0 +1,51 @@
+title: AWS IAM Privilege Escalation via Policy Attachment
+id: a7f3c1e2-4b8d-5e9f-c0a1-2d3b4c5e6f7a
+status: experimental
+description: >
+  Detects privilege escalation in AWS by monitoring for IAM policy attachment
+  events that grant broad or administrative permissions to users, roles, or groups.
+  AttachUserPolicy, AttachRolePolicy, and AttachGroupPolicy are common escalation
+  primitives used post-compromise to elevate access. Used by threat actors
+  establishing persistent admin access after initial credential theft or SSRF
+  exploitation of instance metadata service (IMDSv1).
+references:
+  - https://attack.mitre.org/techniques/T1078/004/
+  - https://attack.mitre.org/techniques/T1098/
+  - https://rhinosecuritylabs.com/aws/aws-privilege-escalation-methods-mitigation/
+  - https://unit42.paloaltonetworks.com/compromised-cloud-compute-credentials/
+author: Chris Ray
+date: 2026-04-29
+tags:
+  - attack.privilege-escalation
+  - attack.persistence
+  - attack.t1078.004
+  - attack.t1098
+logsource:
+  product: aws
+  service: cloudtrail
+detection:
+  selection_attach_events:
+    eventName:
+      - AttachUserPolicy
+      - AttachRolePolicy
+      - AttachGroupPolicy
+      - PutUserPolicy
+      - PutRolePolicy
+      - PutGroupPolicy
+  selection_broad_policies:
+    requestParameters.policyArn|contains:
+      - 'AdministratorAccess'
+      - 'PowerUserAccess'
+      - 'IAMFullAccess'
+  condition: selection_attach_events and selection_broad_policies
+  # NOTE: Sigma can match on known broad managed policy ARNs but cannot score
+  # inline policies (PutUserPolicy/PutRolePolicy) for permissiveness — those
+  # require JSON parsing of the policy document. The SPL in the ADS writeup
+  # adds inline policy analysis via spath to extract Action: "*" grants.
+  # Treat this rule as a high-confidence managed-policy filter;
+  # the SPL covers the full detection surface including inline policies.
+falsepositives:
+  - Authorized IAM administration by privileged operators (should be rare, time-bounded, tracked via change control)
+  - Infrastructure-as-code pipelines (Terraform, CDK) during initial provisioning — baseline expected behavior per environment
+  - Break-glass emergency access procedures — should have a corresponding ticket/approval
+level: high
