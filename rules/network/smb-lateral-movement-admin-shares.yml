@@ -1,0 +1,36 @@
+title: SMB Lateral Movement via Admin Share Access
+id: c9d4b2e7-3f1a-4c8e-b6d5-4e8f2a0b7c5e
+status: experimental
+description: >
+  Detects internal-to-internal SMB connections to administrative shares (C$, ADMIN$)
+  via Zeek smb_mapping.log. Admin share access from non-server-class hosts or to
+  multiple unique targets is a strong indicator of PsExec-style lateral movement,
+  Impacket smbexec, or Cobalt Strike jump psexec. Lateral spread scoring (unique
+  target count) cannot be expressed in base Sigma and is applied in the SPL conversion.
+references:
+  - https://attack.mitre.org/techniques/T1021/002/
+  - https://thedfirreport.com/2021/08/01/bazarcall-to-conti-ransomware-via-trickbot-and-cobalt-strike/
+  - https://www.cisa.gov/sites/default/files/2023-09/aa23-263a-cobalt-strike-cisa_tlp-white.pdf
+author: Chris Ray
+date: 2026-04-30
+tags:
+  - attack.lateral_movement
+  - attack.t1021.002
+logsource:
+  category: network_connection
+  product: zeek
+detection:
+  selection:
+    id.resp_p: 445
+    path|contains:
+      - 'C$'
+      - 'ADMIN$'
+  filter_same_host:
+    id.orig_h|fieldref: id.resp_h
+  condition: selection and not filter_same_host
+falsepositives:
+  - IT administrators performing legitimate remote administration via admin shares
+  - Backup agents using admin shares for VSS-based backups
+  - Vulnerability scanners enumerating shares
+  - Systems management tools (SCCM, Tanium) deploying software
+level: high

@@ -1,0 +1,41 @@
+title: Kerberoasting via RC4 Encryption Downgrade
+id: d2e5c8f1-4a7b-4d9c-b3e6-5f9a3b1c8d2e
+status: experimental
+description: >
+  Detects Kerberoasting attacks by identifying successful Kerberos service ticket
+  requests (Event 4769) using RC4-HMAC encryption (0x17) against non-machine account
+  SPNs. In modern AD environments that prefer AES (0x12/0x11), RC4 TGS requests for
+  user-class service accounts are anomalous and indicate offline hash cracking attempts
+  using tools like Rubeus, Impacket GetUserSPNs.py, or PowerView Invoke-Kerberoast.
+  High-volume scoring (multiple SPNs in a short window) is applied in the SPL conversion.
+references:
+  - https://attack.mitre.org/techniques/T1558/003/
+  - https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-320a
+  - https://adsecurity.org/?p=2730
+author: Chris Ray
+date: 2026-04-30
+tags:
+  - attack.credential_access
+  - attack.t1558.003
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4769
+    TicketEncryptionType: '0x17'
+    Status: '0x0'
+  filter_machine_accounts:
+    ServiceName|endswith: '$'
+  filter_krbtgt:
+    ServiceName: 'krbtgt'
+  filter_local:
+    IpAddress:
+      - '::1'
+      - '127.0.0.1'
+  condition: selection and not filter_machine_accounts and not filter_krbtgt and not filter_local
+falsepositives:
+  - Legacy applications that cannot negotiate AES and legitimately require RC4
+  - Service accounts where msDS-SupportedEncryptionTypes does not include AES
+  - Old domain functional levels (pre-2008) where RC4 is the default
+level: high
