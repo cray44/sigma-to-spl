@@ -118,6 +118,8 @@ Every push runs two jobs:
 
 The validate job checks out [detection-notes](https://github.com/cray44/detection-notes) and detection-validator as siblings so relative paths in `config/validator.yml` resolve identically to local dev.
 
+[detection-workbench](https://github.com/cray44/detection-workbench) wraps this converter — `workbench convert <slug>` calls sigma-to-spl directly and stores the SPL output in the detection record.
+
 ---
 
 ## Rules
