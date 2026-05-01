@@ -39,6 +39,10 @@ detection:
     id.resp_p: 123
     proto: udp
   condition: selection and not filter_internal_dest and not filter_no_data and not filter_ntp
+  # NOTE: This rule is a structural pre-filter only. The full detection requires
+  # streamstats-based CoV/jitter analysis (RITA methodology) applied in the SPL
+  # conversion to identify low-jitter beaconing. The Sigma condition catches all
+  # qualifying external connections; false positives are filtered at SPL tier.
 falsepositives:
   - Monitoring and telemetry agents with regular check-in intervals
   - Software update clients (Windows Update, AV updates)

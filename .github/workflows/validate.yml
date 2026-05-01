@@ -33,3 +33,40 @@ jobs:
 
       - name: Run tests
         run: python -m pytest tests/ -v
+
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Check out all three repos as siblings so relative paths in validator.yml resolve
+      - uses: actions/checkout@v4
+        with:
+          path: sigma-to-spl
+
+      - uses: actions/checkout@v4
+        with:
+          repository: cray44/detection-notes
+          path: detection-notes
+
+      - uses: actions/checkout@v4
+        with:
+          repository: cray44/detection-validator
+          path: detection-validator
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install sigma-to-spl
+        working-directory: sigma-to-spl
+        run: pip install -r requirements.txt
+
+      - name: Install detection-validator
+        working-directory: detection-validator
+        run: pip install -e .
+
+      - name: Run detection-validator
+        working-directory: sigma-to-spl
+        run: detection-validator test rules/ --config config/corelight.yml

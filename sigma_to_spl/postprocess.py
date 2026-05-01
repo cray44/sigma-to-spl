@@ -7,6 +7,15 @@ from .config import SplunkConfig
 # Sigma logsource categories that need a manual entropy note
 ENTROPY_REQUIRED_CATEGORIES = {"dns"}
 
+
+def _has_spl_note(rule_path: Path) -> bool:
+    """Return True if the raw rule YAML contains a '# NOTE:' comment indicating
+    SPL-only additions that cannot be expressed in base Sigma."""
+    try:
+        return "# NOTE:" in rule_path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+
 # Sigma logsource categories we know need a manual review note
 COMPLEX_AGGREGATION_KEYWORDS = ("count by", "max(", "min(", "avg(", "dc(")
 
@@ -16,13 +25,13 @@ class PostProcessor:
         self.config = config
 
     def apply(self, spl: str, rule: SigmaRule, rule_path: Path) -> str:
-        headers = self._build_headers(spl, rule)
+        headers = self._build_headers(spl, rule, rule_path)
         spl = self._inject_index(spl, rule)
         spl = self._apply_field_map(spl)
         spl = self._apply_macros(spl)
         return headers + spl
 
-    def _build_headers(self, spl: str, rule: SigmaRule) -> str:
+    def _build_headers(self, spl: str, rule: SigmaRule, rule_path: Path = None) -> str:
         lines = []
         lines.append(f"| title: {rule.title}")
         if rule.id:
@@ -37,6 +46,9 @@ class PostProcessor:
 
         if any(kw in spl for kw in COMPLEX_AGGREGATION_KEYWORDS):
             lines.append("| MANUAL: complex aggregation detected — verify stats logic matches intent")
+
+        if rule_path and _has_spl_note(rule_path):
+            lines.append("| MANUAL: rule has SPL-only additions not expressible in Sigma — see detection writeup for full query")
 
         return "\n".join(f"* {l}" for l in lines) + "\n\n"
 

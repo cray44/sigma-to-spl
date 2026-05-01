@@ -1,0 +1,38 @@
+# Maps rule slugs (parent_dir/stem) to test-data directories.
+# Paths are relative to this file's location (sigma-to-spl/config/).
+# Both repos must be sibling directories: sigma-to-spl/ and detection-notes/
+
+rules:
+  network/dns-tunneling-high-entropy-subdomains:
+    test_data: ../../detection-notes/detections/network/dns/test-data
+
+  network/tls-c2-ja4-certificate-anomalies:
+    test_data: ../../detection-notes/detections/network/tls/test-data
+
+  network/statistical-beaconing-zeek-conn-log:
+    test_data: ../../detection-notes/detections/network/conn/test-data
+
+  network/smb-lateral-movement-admin-shares:
+    test_data: ../../detection-notes/detections/network/smb/test-data
+
+  identity/oauth-device-code-phishing:
+    test_data: ../../detection-notes/detections/identity/oauth-device-code-phishing/test-data
+
+  identity/entra-id-service-principal-credential-addition:
+    test_data: ../../detection-notes/detections/identity/entra-id-service-principal-credential-addition/test-data
+
+  windows/kerberoasting-rc4-downgrade:
+    test_data: ../../detection-notes/detections/identity/kerberoasting-rc4-downgrade/test-data
+
+  cloud/aws-iam-privilege-escalation-policy-attachment:
+    test_data: ../../detection-notes/detections/cloud/aws-iam/test-data
+
+  cloud/azure-illicit-oauth-consent-grant:
+    test_data: ../../detection-notes/detections/cloud/azure-oauth/test-data
+
+  endpoint/lsass-process-access-credential-dumping:
+    test_data: ../../detection-notes/detections/endpoint/lsass/test-data
+
+  # SigmaHQ upstream mirror — no local test-data (evaluated against SigmaHQ CI)
+  identity/oauth-device-code-phishing-sigmahq:
+    test_data:

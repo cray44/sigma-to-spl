@@ -29,6 +29,10 @@ detection:
       - 'Add OAuth2PermissionGrant'
     result: success
   condition: selection
+  # NOTE: The Sigma rule captures all consent grants; the SPL adds risk scoring on
+  # granted scopes (Mail.Send, Files.ReadWrite.All, offline_access, etc.) and admin
+  # consent detection not expressible in base Sigma. Legitimate SaaS provisioning
+  # is filtered via risk score threshold and trusted_oauth_apps.csv lookup.
 falsepositives:
   - IT teams provisioning legitimate SaaS integrations
   - Developers granting consent to internal test applications

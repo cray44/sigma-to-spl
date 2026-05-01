@@ -28,6 +28,9 @@ detection:
   filter_same_host:
     id.orig_h|fieldref: id.resp_h
   condition: selection and not filter_same_host
+  # NOTE: Lateral spread scoring (count of unique target IPs per source) and trusted
+  # admin host suppression (lookup against trusted_admin_hosts.csv) cannot be
+  # expressed in base Sigma and are applied in the SPL conversion.
 falsepositives:
   - IT administrators performing legitimate remote administration via admin shares
   - Backup agents using admin shares for VSS-based backups
