@@ -2,20 +2,18 @@
 
 ![CI](https://github.com/cray44/sigma-to-spl/actions/workflows/validate.yml/badge.svg)
 
-A thin wrapper around [pySigma](https://github.com/SigmaHQ/pySigma) and the [Splunk backend](https://github.com/SigmaHQ/pySigma-backend-splunk) that adds opinionated post-processing for production Splunk deployments.
-
-`sigma-cli` handles the conversion. This tool handles the gap between "syntactically valid SPL" and "SPL you can actually deploy."
+pySigma converts Sigma rules to syntactically valid SPL. This tool handles the gap between "valid SPL" and "SPL you can actually deploy" — index routing, environment field names, Splunk macros, and savedsearches.conf output. Paired with detection-validator, every rule is also asserted against real log samples before it ships.
 
 ---
 
-## What it adds on top of sigma-cli
+## What it adds
 
-- **Field mapping** — translates Sigma generic field names to your environment's actual field names (Corelight/Zeek sourcetypes, CIM-mapped fields, custom aliases)
-- **Index and sourcetype injection** — prepends `index=` and `sourcetype=` based on log source category, configurable per environment
-- **Macro substitution** — replaces common patterns with your Splunk macros (e.g., `dns_traffic` instead of raw sourcetype strings)
-- **Output formats** — raw SPL, `savedsearches.conf` stanza, or a full alert stub ready to paste into Splunk
-- **Batch conversion** — convert a directory of Sigma rules and write one SPL file per rule
-- **CI-ready** — exits non-zero on conversion failure; designed to run in GitHub Actions
+- **Field mapping** — translates Sigma generic field names to your environment's actual field names (Corelight/Zeek sourcetypes, CIM-mapped fields)
+- **Index and sourcetype injection** — prepends `index=` and `sourcetype=` based on logsource category, configurable per environment
+- **Macro substitution** — replaces raw sourcetype strings with your Splunk macros
+- **MANUAL: warnings** — flags rules that need SPL additions the Sigma condition can't express (entropy scoring, aggregations, SPL-only filtering)
+- **Output formats** — raw SPL or `savedsearches.conf` stanza ready to paste
+- **Batch conversion** — convert a directory of rules, one SPL file per rule
 
 ---
 
@@ -23,6 +21,7 @@ A thin wrapper around [pySigma](https://github.com/SigmaHQ/pySigma) and the [Spl
 
 ```bash
 pip install -r requirements.txt
+pip install -e .
 ```
 
 Requires Python 3.10+.
@@ -36,20 +35,55 @@ Requires Python 3.10+.
 python -m sigma_to_spl convert rules/network/dns-tunneling-high-entropy-subdomains.yml
 ```
 
+Output:
+```
+* | title: DNS Tunneling via High-Entropy Subdomains
+* | id: a8f3b2c1-4d5e-6f7a-8b9c-0d1e2f3a4b5c
+* | status: experimental
+* | description: Detects DNS queries with long subdomain labels indicative of data encoding
+* | MANUAL: this rule category may require entropy scoring — see detection writeup for SPL additions
+
+index=network sourcetype=corelight_dns qtype_name="TXT" OR NOT qtype_name=* OR qtype_name="CNAME"
+    NOT (query IN ("*.internal.corp", "*.local"))
+```
+
+**Convert to savedsearches.conf stanza:**
+```bash
+python -m sigma_to_spl convert rules/network/dns-tunneling-high-entropy-subdomains.yml --format savedsearches
+```
+
+Output:
+```
+[dns-tunneling-high-entropy-subdomains]
+search = index=network sourcetype=corelight_dns qtype_name="TXT" ...
+dispatch.earliest_time = -24h
+dispatch.latest_time = now
+enableSched = 1
+cron_schedule = 0 * * * *
+alert.track = 1
+```
+
 **Convert a directory:**
 ```bash
 python -m sigma_to_spl convert rules/ --output-dir output/
 ```
 
-**Output as savedsearches.conf stanza:**
-```bash
-python -m sigma_to_spl convert rules/network/dns-tunneling-high-entropy-subdomains.yml --format savedsearches
-```
-
-**Use a custom field mapping config:**
+**Custom field mapping config:**
 ```bash
 python -m sigma_to_spl convert rules/ --config config/corelight.yml
 ```
+
+---
+
+## MANUAL: warnings
+
+Some rules require SPL logic that Sigma's condition syntax can't express — entropy scoring, `streamstats`-based beaconing, risk score additions. The PostProcessor emits a `MANUAL:` line in the output header when it detects:
+
+- Logsource category is `dns` (entropy scoring required)
+- Rule contains `count by`/`stats` aggregation
+- Rule YAML contains a `# NOTE:` comment (SPL-only additions documented inline)
+
+`MANUAL:` rules are still CI-tested — detection-validator asserts malicious events fire at the Sigma tier and treats benign false positives as expected (WARN, not FAIL). The SPL additions handle precision; the Sigma layer handles coverage.
 
 ---
 
@@ -58,7 +92,6 @@ python -m sigma_to_spl convert rules/ --config config/corelight.yml
 Copy `config/corelight.yml` and edit to match your environment:
 
 ```yaml
-# config/corelight.yml
 index_map:
   dns: "index=network sourcetype=corelight_dns"
   firewall: "index=network sourcetype=corelight_conn"
@@ -72,29 +105,28 @@ field_map:
 
 macros:
   dns_traffic: "`corelight_dns`"
-  internal_networks: "`internal_subnets`"
 ```
 
 ---
 
-## CI Usage (GitHub Actions)
+## CI
 
-```yaml
-- name: Validate and convert Sigma rules
-  uses: ./.github/workflows/validate.yml
-```
+Every push runs two jobs:
 
-See [`.github/workflows/validate.yml`](.github/workflows/validate.yml) for the full workflow.
+- **convert** — converts all rules, exits non-zero on any conversion failure
+- **validate** — runs [detection-validator](https://github.com/cray44/detection-validator) against all rules with test-data samples; asserts malicious events match and benign events don't
+
+The validate job checks out [detection-notes](https://github.com/cray44/detection-notes) and detection-validator as siblings so relative paths in `config/validator.yml` resolve identically to local dev.
 
 ---
 
 ## Rules
 
-Sample Sigma rules are in `rules/` — these are the same rules documented in [detection-notes](https://github.com/cray44/detection-notes) with the Sigma rule as the source of truth.
+`rules/` contains the Sigma source of truth for all detections documented in [detection-notes](https://github.com/cray44/detection-notes). The ADS writeup references the rule by path; the rule is never embedded inline.
 
----
-
-## Limitations
-
-- pySigma's Splunk backend handles most condition types but has gaps with complex aggregations. Where the generated SPL needs manual adjustment, this tool will note it in a comment at the top of the output.
-- Entropy scoring is not expressible in Sigma's condition syntax — rules that require it will output a base SPL query with a `# MANUAL: add entropy scoring` comment.
+| Category | Rules |
+|----------|-------|
+| network | DNS tunneling, TLS C2, statistical beaconing, SMB lateral movement |
+| identity | OAuth device code phishing, Entra ID SPN credential addition, Kerberoasting |
+| cloud | AWS IAM privilege escalation, Azure illicit OAuth consent grant |
+| endpoint | LSASS process access |
