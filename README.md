@@ -1,5 +1,7 @@
 # sigma-to-spl
 
+![CI](https://github.com/cray44/sigma-to-spl/actions/workflows/validate.yml/badge.svg)
+
 A thin wrapper around [pySigma](https://github.com/SigmaHQ/pySigma) and the [Splunk backend](https://github.com/SigmaHQ/pySigma-backend-splunk) that adds opinionated post-processing for production Splunk deployments.
 
 `sigma-cli` handles the conversion. This tool handles the gap between "syntactically valid SPL" and "SPL you can actually deploy."
