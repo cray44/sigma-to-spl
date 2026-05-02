@@ -1,0 +1,39 @@
+title: WMI Event Subscription Persistence via Executable Consumer
+id: a3f2c7b1-8e5d-4f9a-b2c3-7d6e1a4b9f0c
+status: experimental
+description: >
+  Detects creation of WMI event subscriptions using CommandLineEventConsumer or
+  ActiveScriptEventConsumer — the two consumer types capable of executing arbitrary
+  code on trigger. Combined with a FilterToConsumerBinding (Sysmon Event 21),
+  these subscriptions survive reboots and fire without user interaction.
+  Used by APT29, APT41, and ransomware affiliates for post-compromise persistence.
+  Sysmon Event 20 captures consumer creation with the Type and Destination fields
+  needed to score intent; Event 21 captures filter-to-consumer binding activation.
+references:
+  - https://attack.mitre.org/techniques/T1546/003/
+  - https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-277a
+  - https://www.mandiant.com/resources/blog/hackerone-disclosure-wmi-persistence
+author: Chris Ray
+date: 2026-05-01
+tags:
+  - attack.persistence
+  - attack.t1546.003
+logsource:
+  product: windows
+  category: wmi_event
+detection:
+  selection:
+    EventID: 20
+    Type:
+      - 'CommandLineEventConsumer'
+      - 'ActiveScriptEventConsumer'
+  filter_known_good:
+    Name|contains:
+      - 'SCM Event Log Consumer'
+      - 'BVTConsumer'
+  condition: selection and not filter_known_good
+falsepositives:
+  - SCCM/ConfigMgr management agents that use WMI subscriptions for endpoint monitoring
+  - OEM hardware management utilities (HP iLO agents, Dell OMSA, Lenovo System Update)
+  - Some backup and infrastructure monitoring agents (Veeam, SolarWinds NCM)
+level: high
