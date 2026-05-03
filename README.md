@@ -128,7 +128,7 @@ The validate job checks out [detection-notes](https://github.com/cray44/detectio
 
 | Category | Rules |
 |----------|-------|
-| network | DNS tunneling, TLS C2, statistical beaconing, SMB lateral movement |
-| identity | OAuth device code phishing, Entra ID SPN credential addition, Kerberoasting |
-| cloud | AWS IAM privilege escalation, Azure illicit OAuth consent grant |
-| endpoint | LSASS process access |
+| network | [DNS tunneling](rules/network/dns-tunneling-high-entropy-subdomains.yml), [TLS C2 via JA4](rules/network/tls-c2-ja4-certificate-anomalies.yml), [statistical beaconing](rules/network/statistical-beaconing-zeek-conn-log.yml), [SMB lateral movement](rules/network/smb-lateral-movement-admin-shares.yml) |
+| identity | [OAuth device code phishing](rules/identity/oauth-device-code-phishing.yml), [Entra ID SPN credential addition](rules/identity/entra-id-service-principal-credential-addition.yml), [Kerberoasting RC4 downgrade](rules/windows/kerberoasting-rc4-downgrade.yml) |
+| cloud | [AWS IAM privilege escalation](rules/cloud/aws-iam-privilege-escalation-policy-attachment.yml), [Azure illicit OAuth consent grant](rules/cloud/azure-illicit-oauth-consent-grant.yml), [AWS EC2 snapshot exfiltration](rules/cloud/aws-ec2-snapshot-exfiltration.yml) |
+| endpoint | [LSASS process access](rules/endpoint/lsass-process-access-credential-dumping.yml), [WMI event subscription persistence](rules/windows/wmi-event-subscription-persistence.yml) |
