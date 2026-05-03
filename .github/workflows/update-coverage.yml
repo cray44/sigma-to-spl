@@ -1,0 +1,51 @@
+name: Update ATT&CK coverage layer
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'rules/**'
+
+jobs:
+  update-coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout sigma-to-spl
+        uses: actions/checkout@v4
+        with:
+          path: sigma-to-spl
+
+      - name: Checkout spl-coverage-map
+        uses: actions/checkout@v4
+        with:
+          repository: cray44/spl-coverage-map
+          path: spl-coverage-map
+          token: ${{ secrets.Coverage_map_pat }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install spl-coverage-map
+        working-directory: spl-coverage-map
+        run: pip install -r requirements.txt
+
+      - name: Generate coverage layer
+        working-directory: spl-coverage-map
+        run: python -m coverage_map generate ../sigma-to-spl/rules/ --output coverage.json --summary
+
+      - name: Commit and push if changed
+        working-directory: spl-coverage-map
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add coverage.json
+          if git diff --cached --quiet; then
+            echo "No changes to coverage.json"
+          else
+            git commit -m "chore: regenerate coverage.json"
+            git push
+          fi
