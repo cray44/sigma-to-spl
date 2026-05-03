@@ -1,0 +1,39 @@
+title: AWS EC2 Snapshot Shared with External Account
+id: e3f4a5b6-7c8d-9e0f-a1b2-c3d4e5f6a7b8
+status: experimental
+description: >
+  Detects EC2 EBS snapshot permission modification granting createVolumePermission
+  to an external AWS account — the primary mechanism for cloud data exfiltration
+  via snapshot replication. An attacker with ec2:ModifySnapshotAttribute can share
+  any snapshot they can enumerate to an account they control, then mount the volume
+  and read the data without touching the victim account again. Observed in SCARLETEEL
+  and related cloud intrusion campaigns targeting containerized workloads and EC2
+  instances running sensitive data pipelines.
+references:
+  - https://attack.mitre.org/techniques/T1537/
+  - https://sysdig.com/blog/cloud-breach-terraform-data-theft/
+  - https://unit42.paloaltonetworks.com/cloud-threat-report-2H2023/
+  - https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-modifying-snapshot-permissions.html
+author: Chris Ray
+date: 2026-05-02
+tags:
+  - attack.exfiltration
+  - attack.t1537
+logsource:
+  product: aws
+  service: cloudtrail
+detection:
+  selection:
+    eventName: ModifySnapshotAttribute
+    requestParameters.attributeType: createVolumePermission
+  # NOTE: Sigma matches the API action and attribute type but cannot filter shared
+  # account IDs against a trusted account allowlist — that check requires a Splunk
+  # lookup (trusted_aws_accounts.csv). Without the allowlist, this rule FPs on
+  # cross-account DR automation and AWS Backup. The SPL in the ADS writeup adds
+  # allowlist suppression and surfaces the external account ID for triage.
+  condition: selection
+falsepositives:
+  - AWS Backup cross-account snapshot sharing to known DR accounts within an AWS Organization
+  - Authorized cross-account sharing to known partner or subsidiary accounts
+  - Snapshot sharing automation (Terraform, Lambda lifecycle policies) targeting allowlisted accounts
+level: high
